@@ -94,7 +94,7 @@ DEYE_PASSWORD — пароль у форматі SHA256.
   <img src="https://img.shields.io/badge/Підтримати_на-Donatello-FF5722?style=for-the-badge" alt="Donatello">
 </a>
 
-🇺🇦 **Прямий донат на Банку:**
+
 <a href="https://send.monobank.ua/jar/Abc4m6jPBC" target="_blank">
   <img src="https://img.shields.io/badge/Прямий_донат-Monobank-000000?style=for-the-badge" alt="Monobank">
 </a>

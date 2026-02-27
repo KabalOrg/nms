@@ -90,12 +90,15 @@ DEYE_PASSWORD — пароль у форматі SHA256.
 
 Якщо ця система допомогла вашому бізнесу або провайдеру пережити відключення світла, ви можете підтримати розвиток проекту:
 
-<a href="https://donatello.to/kabal_org" target="_blank">
-  <img src="https://donatello.to/img/donatello-btn-uk.png" alt="Підтримати на Donatello" width="250">
+<a href="https://donatello.to/ТВОЙ_ЛОГИН" target="_blank">
+  <img src="https://img.shields.io/badge/Підтримати_на-Donatello-FF5722?style=for-the-badge" alt="Donatello">
 </a>
 
 🇺🇦 **Прямий донат на Банку:**
 Також ви можете закинути будь-яку суму безпосередньо на [Банку Monobank](https://send.monobank.ua/jar/Abc4m6jPBC).
+## 🍕 Підтримати проект (Donate)
+
+Якщо ця система допомогла вашому бізнесу або провайдеру пережити відключення світла, ви можете підтримати розвиток проекту:
 
 
 

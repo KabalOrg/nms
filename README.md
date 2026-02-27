@@ -86,9 +86,21 @@ DEYE_PASSWORD — пароль у форматі SHA256.
 <img width="1895" height="928" alt="gitscreen3" src="https://github.com/user-attachments/assets/fa45e763-6134-4854-9c62-0cfc5700537b" />
 
 
+## 🍕 Підтримати проект (Donate)
 
+Якщо ця система допомогла вашому бізнесу або провайдеру пережити відключення світла, ви можете підтримати розвиток проекту:
+
+<a href="https://donatello.to/kabal_org" target="_blank">
+  <img src="https://donatello.to/img/donatello-btn-uk.png" alt="Підтримати на Donatello" width="250">
+</a>
+
+🇺🇦 **Прямий донат на Банку:**
+Також ви можете закинути будь-яку суму безпосередньо на [Банку Monobank](https://send.monobank.ua/jar/Abc4m6jPBC).
 
 
 
 ## 📄 Ліцензія
 Цей проект розповсюджується під ліцензією MIT.
+
+
+

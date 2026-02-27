@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NMS | Адмін-панель</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        body { background: #020617; font-family: 'Inter', sans-serif; color: #f1f5f9; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.05); }
+        .input-dark { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.5rem 0.75rem; border-radius: 0.5rem; width: 100%; font-size: 0.875rem; transition: border-color 0.2s; }
+        .input-dark:focus { outline: none; border-color: #3b82f6; }
+        .label-text { font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; display: block; }
+        .check-toggle { appearance: none; width: 3rem; height: 1.5rem; background: rgba(255,255,255,0.1); border-radius: 999px; position: relative; cursor: pointer; outline: none; transition: 0.3s; }
+        .check-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 1.25rem; height: 1.25rem; background: #94a3b8; border-radius: 50%; transition: 0.3s; }
+        .check-toggle:checked { background: #3b82f6; }
+        .check-toggle:checked::after { left: calc(100% - 2px); transform: translateX(-100%); background: white; }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col min-h-screen">
+    <div id="app" class="max-w-[1200px] mx-auto w-full flex-grow">
+        
+        <div v-if="!isLoggedIn" class="min-h-[80vh] flex items-center justify-center">
+            <div class="glass p-8 rounded-2xl w-full max-w-sm text-center shadow-2xl shadow-blue-900/20">
+                <div class="bg-blue-600 w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30">
+                    <i class="fas fa-lock text-white text-2xl"></i>
+                </div>
+                <h2 class="text-xl font-black text-white mb-6 tracking-widest uppercase">Авторизація</h2>
+                <input type="password" v-model="password" @keyup.enter="login" placeholder="Введіть пароль..." class="input-dark mb-4 text-center text-lg tracking-widest">
+                <button @click="login" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-500/20">УВІЙТИ</button>
+            </div>
+        </div>
+
+        <div v-else>
+            <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-white/5 pb-6">
+                <div class="flex items-center gap-4">
+                    <a href="index.html" class="glass w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-black text-white uppercase leading-tight">Налаштування {{ nmsPrefix }}</h1>
+                        <span class="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase">Конфігурація вузлів</span>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button @click="openGlobalNotify" class="glass px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2">
+                        <i class="fas fa-bell"></i> Глобальні ID
+                    </button>
+                    <button @click="openModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2">
+                        <i class="fas fa-plus"></i> Додати вузол
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex justify-between items-center mb-6">
+                <div class="relative w-full max-w-md">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+                    <input type="text" v-model="searchQuery" placeholder="Пошук за назвою, містом або IP..." class="input-dark pl-9">
+                </div>
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    Всього вузлів: <span class="text-white">{{ filteredNodes.length }}</span>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-white/5 text-[10px] uppercase tracking-wider text-slate-400">
+                                <th class="p-4 font-black">Назва / Місто</th>
+                                <th class="p-4 font-black">Тип / Модель</th>
+                                <th class="p-4 font-black">Адреса / SN</th>
+                                <th class="p-4 font-black text-center">Функції</th>
+                                <th class="p-4 font-black text-right">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm divide-y divide-white/5">
+                            <tr v-for="node in filteredNodes" :key="node.id" class="hover:bg-white/[0.02] transition-colors">
+                                <td class="p-4">
+                                    <div class="font-bold text-white uppercase">{{ node.name }}</div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5 font-bold uppercase tracking-widest">{{ node.city }}</div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase" :class="node.type === 'deye' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-300'">{{ node.type }}</span>
+                                        <span class="text-xs text-slate-300 mono">{{ node.model }}</span>
+                                    </div>
+                                </td>
+                                <td class="p-4 mono text-xs text-slate-400">
+                                    {{ node.type === 'deye' ? node.device_sn : node.host }}
+                                </td>
+                                <td class="p-4 text-center">
+                                    <div class="flex items-center justify-center gap-2 text-lg">
+                                        <i class="fas fa-battery-full" :class="node.is_lifepo4 ? 'text-green-500' : 'text-slate-600'" title="LiFePO4"></i>
+                                        <i class="fas fa-paper-plane" :class="node.alerts_enabled ? 'text-blue-500' : 'text-slate-600'" title="Telegram Alerts"></i>
+                                        <i class="fas fa-phone-alt" :class="node.call_enabled ? 'text-red-500' : 'text-slate-600'" title="Hardware Call"></i>
+                                        <i class="fas fa-users" :class="node.powered_by_clients ? 'text-purple-400' : 'text-slate-600'" title="Client Power"></i>
+                                    </div>
+                                </td>
+                                <td class="p-4 text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <button @click="openModal(node)" class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center justify-center"><i class="fas fa-pen text-xs"></i></button>
+                                        <button @click="deleteNode(node.id)" class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"><i class="fas fa-trash text-xs"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="filteredNodes.length === 0">
+                                <td colspan="5" class="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">Вузлів не знайдено</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div class="glass p-6 md:p-8 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-white/10 relative">
+                <button @click="showModal = false" class="absolute top-6 right-6 text-slate-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
+                
+                <h2 class="text-xl font-black text-white mb-6 uppercase tracking-widest">
+                    <i class="fas" :class="editingNode.id ? 'fa-pen' : 'fa-plus'"></i> 
+                    {{ editingNode.id ? 'Редагувати вузол' : 'Додати новий вузол' }}
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="label-text">Тип обладнання</label>
+                        <select v-model="editingNode.type" class="input-dark">
+                            <option value="snmp">SNMP (Комутатор / ДБЖ)</option>
+                            <option value="deye">Deye (Інвертор Cloud)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-text">Місто / Район</label>
+                        <input type="text" v-model="editingNode.city" class="input-dark" placeholder="Наприклад: Кременчук">
+                    </div>
+                    <div>
+                        <label class="label-text">Назва вузла</label>
+                        <input type="text" v-model="editingNode.name" class="input-dark" placeholder="Наприклад: KM-Center">
+                    </div>
+                    <div>
+                        <label class="label-text">Модель обладнання</label>
+                        <input type="text" v-model="editingNode.model" class="input-dark" placeholder="Наприклад: DGS-1100-08P">
+                    </div>
+                </div>
+
+                <div v-if="editingNode.type === 'deye'" class="bg-blue-900/10 p-4 rounded-xl border border-blue-500/20 mb-6">
+                    <label class="label-text text-blue-400">Deye Serial Number (SN)</label>
+                    <input type="text" v-model="editingNode.device_sn" class="input-dark mono" placeholder="Серійний номер логгера">
+                </div>
+
+                <div v-if="editingNode.type === 'snmp'" class="bg-white/5 p-4 rounded-xl border border-white/5 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="label-text">IP Адреса (Host)</label>
+                        <input type="text" v-model="editingNode.host" class="input-dark mono" placeholder="10.10.x.x">
+                    </div>
+                    <div>
+                        <label class="label-text">SNMP Community</label>
+                        <input type="text" v-model="editingNode.community" class="input-dark mono" placeholder="public">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-black/20 p-5 rounded-xl border border-white/5">
+                    <label class="flex items-center justify-between cursor-pointer group">
+                        <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-2"><i class="fas fa-battery-full text-green-500 w-4"></i> Акумулятор LiFePO4</span>
+                        <input type="checkbox" v-model="editingNode.is_lifepo4" class="check-toggle">
+                    </label>
+                    <label class="flex items-center justify-between cursor-pointer group">
+                        <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-2"><i class="fas fa-paper-plane text-blue-500 w-4"></i> Telegram сповіщення</span>
+                        <input type="checkbox" v-model="editingNode.alerts_enabled" class="check-toggle">
+                    </label>
+                    <label class="flex items-center justify-between cursor-pointer group">
+                        <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-2"><i class="fas fa-phone-alt text-red-500 w-4"></i> Дозвін при аварії (PBX)</span>
+                        <input type="checkbox" v-model="editingNode.call_enabled" class="check-toggle">
+                    </label>
+                    <label class="flex items-center justify-between cursor-pointer group">
+                        <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-2"><i class="fas fa-users text-purple-400 w-4"></i> Живлення від клієнтів</span>
+                        <input type="checkbox" v-model="editingNode.powered_by_clients" class="check-toggle">
+                    </label>
+
+                    <div v-if="editingNode.powered_by_clients" class="md:col-span-2 mt-2 pt-4 border-t border-white/5 animate-fade-in">
+                        <label class="label-text text-blue-400">Номер телефону клієнта</label>
+                        <input type="text" v-model="editingNode.client_phone" class="input-dark mono" placeholder="Наприклад: +380501234567">
+                    </div>
+
+                    <label class="flex items-center justify-between cursor-pointer group md:col-span-2 mt-2 pt-4 border-t border-white/5">
+                        <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-2"><i class="fas fa-eye-slash text-slate-400 w-4"></i> Без датчика живлення (вузол показує лише вольтаж)</span>
+                        <input type="checkbox" v-model="editingNode.no_power_sensor" class="check-toggle">
+                    </label>
+                </div>
+
+                <div class="mb-8">
+                    <label class="label-text">Telegram ID для індивідуальних сповіщень (через кому)</label>
+                    <input type="text" v-model="localNotifyStr" class="input-dark mono" placeholder="Наприклад: 123456789, 987654321">
+                </div>
+
+                <div class="flex gap-4">
+                    <button @click="showModal = false" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-all">СКАСУВАТИ</button>
+                    <button @click="saveNode" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 tracking-widest uppercase">ЗБЕРЕГТИ</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showGlobalModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div class="glass p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-2xl border border-white/10">
+                <h2 class="text-xl font-black text-white mb-2 uppercase tracking-widest"><i class="fas fa-globe text-blue-500"></i> Глобальні сповіщення</h2>
+                <p class="text-xs text-slate-400 mb-6">Ці Telegram ID отримуватимуть сповіщення від усіх вузлів, де увімкнено "Telegram сповіщення".</p>
+                
+                <textarea v-model="globalNotifyStr" rows="4" class="input-dark mono mb-6" placeholder="123456789, 987654321..."></textarea>
+                
+                <div class="flex gap-4">
+                    <button @click="showGlobalModal = false" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-all">СКАСУВАТИ</button>
+                    <button @click="saveGlobalNotify" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 tracking-widest uppercase">ЗБЕРЕГТИ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="mt-12 mb-4 text-center text-[10px] text-white/20 font-bold uppercase tracking-widest mono select-none">
+        powered by kabal 2026
+    </footer>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        createApp({
+            setup() {
+                const isLoggedIn = ref(false); const password = ref(''); const nodes = ref([]); const globalNotifyStr = ref('');
+                const showModal = ref(false); const showGlobalModal = ref(false); const searchQuery = ref('');
+                const nmsPrefix = ref('KABAL');
+                
+                const defaultNode = { id: '', type: 'snmp', city: 'Кременчук', name: '', model: '', host: '', community: 'public', device_sn: '', notify_ids: [], alerts_enabled: true, is_lifepo4: false, call_enabled: false, powered_by_clients: false, client_phone: '', no_power_sensor: false };
+                const editingNode = ref({...defaultNode});
+                const localNotifyStr = ref('');
+
+                const fetchInfo = async () => {
+                    try {
+                        const r = await fetch('/api/info');
+                        const d = await r.json();
+                        nmsPrefix.value = d.prefix.toUpperCase();
+                        document.title = `${nmsPrefix.value} NMS | Адмін-панель`;
+                    } catch(e) {}
+                };
+
+                const apiCall = async (url, options = {}) => {
+                    const res = await fetch(url, options);
+                    if (res.status === 401 || res.status === 403) { isLoggedIn.value = false; throw new Error("Unauthorized"); }
+                    if (!res.ok) throw new Error("API Error"); return res;
+                };
+
+                const login = async () => {
+                    try {
+                        const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: password.value }) });
+                        if (res.ok) { isLoggedIn.value = true; loadData(); } else { alert('Невірний пароль!'); }
+                    } catch (e) { alert('Помилка з\'єднання'); }
+                };
+
+                const loadData = async () => {
+                    try {
+                        const resNodes = await apiCall('/api/admin/nodes'); nodes.value = await resNodes.json() || [];
+                        const resGlobal = await apiCall('/api/admin/global_notify'); const globals = await resGlobal.json() || []; globalNotifyStr.value = globals.join(', ');
+                        isLoggedIn.value = true;
+                    } catch (e) {}
+                };
+
+                const filteredNodes = computed(() => {
+                    if (!searchQuery.value) return nodes.value; const q = searchQuery.value.toLowerCase();
+                    return nodes.value.filter(n => (n.name && n.name.toLowerCase().includes(q)) || (n.city && n.city.toLowerCase().includes(q)) || (n.host && n.host.includes(q)) || (n.device_sn && n.device_sn.toLowerCase().includes(q)));
+                });
+
+                const openModal = (node = null) => {
+                    if (node) { editingNode.value = JSON.parse(JSON.stringify(node)); localNotifyStr.value = (editingNode.value.notify_ids || []).join(', '); } 
+                    else { editingNode.value = {...defaultNode}; localNotifyStr.value = ''; }
+                    showModal.value = true;
+                };
+
+                const saveNode = async () => {
+                    editingNode.value.notify_ids = localNotifyStr.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                    try {
+                        await apiCall('/api/admin/nodes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editingNode.value) });
+                        showModal.value = false; loadData();
+                    } catch (e) { alert("Помилка при збереженні"); }
+                };
+
+                const deleteNode = async (id) => {
+                    if (!confirm("Ви впевнені, що хочете видалити цей вузол?")) return;
+                    try { await apiCall(`/api/admin/nodes?id=${id}`, { method: 'DELETE' }); loadData(); } catch (e) { alert("Помилка при видаленні"); }
+                };
+
+                const openGlobalNotify = () => { showGlobalModal.value = true; };
+                const saveGlobalNotify = async () => {
+                    const ids = globalNotifyStr.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                    try { await apiCall('/api/admin/global_notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ids) }); showGlobalModal.value = false; } catch (e) { alert("Помилка збереження"); }
+                };
+
+                onMounted(() => { fetchInfo(); loadData(); });
+
+                return { isLoggedIn, password, login, nodes, filteredNodes, searchQuery, showModal, editingNode, localNotifyStr, openModal, saveNode, deleteNode, showGlobalModal, globalNotifyStr, openGlobalNotify, saveGlobalNotify, nmsPrefix };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

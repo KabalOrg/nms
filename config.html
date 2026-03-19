@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NMS | Адмін-панель</title>
+    <title>Satel NMS | Адмін-панель</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" type="image/png" href="favicon.png">
@@ -22,8 +22,8 @@
         .check-toggle:checked::after { left: calc(100% - 2px); transform: translateX(-100%); background: white; }
     </style>
 </head>
-<body class="p-4 md:p-8 flex flex-col min-h-screen">
-    <div id="app" class="max-w-[1200px] mx-auto w-full flex-grow">
+<body class="p-4 md:p-8">
+    <div id="app" class="max-w-[1200px] mx-auto">
         
         <div v-if="!isLoggedIn" class="min-h-[80vh] flex items-center justify-center">
             <div class="glass p-8 rounded-2xl w-full max-w-sm text-center shadow-2xl shadow-blue-900/20">
@@ -43,7 +43,7 @@
                         <i class="fas fa-arrow-left"></i>
                     </a>
                     <div>
-                        <h1 class="text-2xl font-black text-white uppercase leading-tight">Налаштування {{ nmsPrefix }}</h1>
+                        <h1 class="text-2xl font-black text-white uppercase leading-tight">Налаштування NMS</h1>
                         <span class="text-[10px] font-bold text-blue-400 tracking-[0.2em] uppercase">Конфігурація вузлів</span>
                     </div>
                 </div>
@@ -98,7 +98,10 @@
                                     <div class="flex items-center justify-center gap-2 text-lg">
                                         <i class="fas fa-battery-full" :class="node.is_lifepo4 ? 'text-green-500' : 'text-slate-600'" title="LiFePO4"></i>
                                         <i class="fas fa-paper-plane" :class="node.alerts_enabled ? 'text-blue-500' : 'text-slate-600'" title="Telegram Alerts"></i>
-                                        <i class="fas fa-phone-alt" :class="node.call_enabled ? 'text-red-500' : 'text-slate-600'" title="Hardware Call"></i>
+                                        <span title="Дозвін — в розробці" class="relative inline-flex items-center">
+                                            <i class="fas fa-phone-alt text-slate-700"></i>
+                                            <span class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full" title="В розробці"></span>
+                                        </span>
                                         <i class="fas fa-users" :class="node.powered_by_clients ? 'text-purple-400' : 'text-slate-600'" title="Client Power"></i>
                                     </div>
                                 </td>
@@ -174,10 +177,15 @@
                         <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-2"><i class="fas fa-paper-plane text-blue-500 w-4"></i> Telegram сповіщення</span>
                         <input type="checkbox" v-model="editingNode.alerts_enabled" class="check-toggle">
                     </label>
-                    <label class="flex items-center justify-between cursor-pointer group">
-                        <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-2"><i class="fas fa-phone-alt text-red-500 w-4"></i> Дозвін при аварії (PBX)</span>
-                        <input type="checkbox" v-model="editingNode.call_enabled" class="check-toggle">
-                    </label>
+                    <div class="flex items-center justify-between opacity-50 cursor-not-allowed" title="Функція в розробці">
+                        <span class="text-xs font-bold text-slate-400 flex items-center gap-2">
+                            <i class="fas fa-phone-alt text-slate-500 w-4"></i>
+                            Дозвін при аварії (PBX)
+                        </span>
+                        <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 flex items-center gap-1">
+                            <i class="fas fa-hammer"></i> В РОЗРОБЦІ
+                        </span>
+                    </div>
                     <label class="flex items-center justify-between cursor-pointer group">
                         <span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors flex items-center gap-2"><i class="fas fa-users text-purple-400 w-4"></i> Живлення від клієнтів</span>
                         <input type="checkbox" v-model="editingNode.powered_by_clients" class="check-toggle">
@@ -219,11 +227,8 @@
                 </div>
             </div>
         </div>
+
     </div>
-    
-    <footer class="mt-12 mb-4 text-center text-[10px] text-white/20 font-bold uppercase tracking-widest mono select-none">
-        powered by kabal 2026
-    </footer>
 
     <script>
         const { createApp, ref, computed, onMounted } = Vue;
@@ -231,20 +236,10 @@
             setup() {
                 const isLoggedIn = ref(false); const password = ref(''); const nodes = ref([]); const globalNotifyStr = ref('');
                 const showModal = ref(false); const showGlobalModal = ref(false); const searchQuery = ref('');
-                const nmsPrefix = ref('KABAL');
                 
                 const defaultNode = { id: '', type: 'snmp', city: 'Кременчук', name: '', model: '', host: '', community: 'public', device_sn: '', notify_ids: [], alerts_enabled: true, is_lifepo4: false, call_enabled: false, powered_by_clients: false, client_phone: '', no_power_sensor: false };
                 const editingNode = ref({...defaultNode});
                 const localNotifyStr = ref('');
-
-                const fetchInfo = async () => {
-                    try {
-                        const r = await fetch('/api/info');
-                        const d = await r.json();
-                        nmsPrefix.value = d.prefix.toUpperCase();
-                        document.title = `${nmsPrefix.value} NMS | Адмін-панель`;
-                    } catch(e) {}
-                };
 
                 const apiCall = async (url, options = {}) => {
                     const res = await fetch(url, options);
@@ -280,6 +275,7 @@
 
                 const saveNode = async () => {
                     editingNode.value.notify_ids = localNotifyStr.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                    editingNode.value.call_enabled = false; // Функція дозвону в розробці — завжди вимкнено
                     try {
                         await apiCall('/api/admin/nodes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editingNode.value) });
                         showModal.value = false; loadData();
@@ -297,9 +293,9 @@
                     try { await apiCall('/api/admin/global_notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ids) }); showGlobalModal.value = false; } catch (e) { alert("Помилка збереження"); }
                 };
 
-                onMounted(() => { fetchInfo(); loadData(); });
+                onMounted(() => { loadData(); });
 
-                return { isLoggedIn, password, login, nodes, filteredNodes, searchQuery, showModal, editingNode, localNotifyStr, openModal, saveNode, deleteNode, showGlobalModal, globalNotifyStr, openGlobalNotify, saveGlobalNotify, nmsPrefix };
+                return { isLoggedIn, password, login, nodes, filteredNodes, searchQuery, showModal, editingNode, localNotifyStr, openModal, saveNode, deleteNode, showGlobalModal, globalNotifyStr, openGlobalNotify, saveGlobalNotify };
             }
         }).mount('#app');
     </script>
